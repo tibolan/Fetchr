@@ -145,8 +145,6 @@ const saveStore = async function (name: string) {
 }
 /**
  * use requestAnimationFrame to check if a request should be cancelled because of timeout exceeded
- * we add a 15ms delay be more accurate (I know it seems crazy :-)
- * 15ms ~= 60fps
  * @param request
  */
 const checkTimeout = function (request: FetchrRequestType) {
@@ -176,7 +174,6 @@ let FetchrOptions: FetchrOptionsType = {
 
 const Fetchr = async function (request: FetchrRequestType): Promise<FetchrResponseType> {
   let options = Object.assign({}, FetchrOptions, request.options)
-  let requestTimeout: any = 0
 
   if (!FetchrStore) {
     FetchrStore = JSON.parse(localStorage.getItem(options.storageName)) || { [options.version]: {}}
@@ -214,9 +211,7 @@ const Fetchr = async function (request: FetchrRequestType): Promise<FetchrRespon
         request.endAt = Date.now()
 
         if (request.cacheable && response.ok) {
-          await setCache(request, response, options).catch((e) => {
-            //
-          })
+          await setCache(request, response, options).catch((e) => {/* SILENT CATCH */})
         }
 
         if (response.ok) {
@@ -227,8 +222,7 @@ const Fetchr = async function (request: FetchrRequestType): Promise<FetchrRespon
       })
       .catch((error) => {
         request.endAt = Date.now()
-        if (requestTimeout) clearTimeout(requestTimeout)
-        if (request.timeout && (request.startAt + request.timeout) < Date.now()) {
+        if (request.timeout && (request.startAt + request.timeout) < request.endAt) {
           // @ts-ignore
           return Promise.reject(buildResponse(request, new Error('AbortTimeout', {
             cause: error,
