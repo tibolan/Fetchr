@@ -1,0 +1,27 @@
+{
+  "name": "fetchr",
+  "version": "1.0.0",
+  "description": "window.fetch wrapper with cacheStorage support, abortController and suga'",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tibolan/Fetchr.git"
+  },
+  "keywords": [
+    "window.fetch",
+    "axios-like"
+  ],
+  "author": "tibolan@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tibolan/Fetchr/issues"
+  },
+  "homepage": "https://github.com/tibolan/Fetchr#readme",
+  "dependencies": {
+    "@types/lodash.merge": "~4.6.6",
+    "lodash.merge": "~4.6.2"
+  }
+}
