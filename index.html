@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fetch test page dd</title>
+    <style>
+        html, body {
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+
+        output {
+            display: block;
+            white-space: pre-wrap;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+            margin: 40px;
+            transition: border 200ms;
+            border-radius: 5px;
+        }
+
+        output pre {
+            border: 2px solid lightgrey;
+            padding: 20px;
+        }
+
+
+        output:empty {
+            display: none;
+        }
+
+        output.ok pre {
+            border-color: #43aa8b;
+        }
+
+        output.error pre {
+            border-color: #f94144;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Fetchr</h1>
+    <button data-url="https://jsonplaceholder.typicode.com/users/7" data-type="json">JSON</button>
+    <button data-url="http://localhost:1177/text" data-type="text">TEXT</button>
+    <button data-url="http://localhost:1177/test404" data-type="json">404</button>
+    <button data-url="http://localhost:1177/test301" data-type="text">301</button>
+    <button data-url="http://localhost:1177/wait/990" data-type="text">wait 500</button>
+    <button data-url="http://localhost:1177/wait/1000" data-type="text">wait 1000</button>
+    <button data-url="http://localhost:1177/images/jupiter.jpg" data-type="blob">Jupiter</button>
+    <button data-url="toto" data-type="json">error</button>
+    <button data-url="https://myedenred-fr.eu.edenred.io/v2/referentials">401</button>
+
+
+</header>
+<main>
+    <output id="console"></output>
+</main>
+
+<script type="module">
+    import Client from "./Client.js";
+
+    let API = new Client({
+        headers: {
+            Authorization: "Bearer 1234",
+            ClientId: '1234',
+            ClientSecret: 'abcdef'
+        },
+        cacheable: "10s",
+        options: {
+            query: {
+                splitArray: true
+            }
+        }
+    })
+
+    var output = document.getElementById('console')
+    var buttons = Array.from(document.querySelectorAll("button"))
+    buttons.forEach((button) => {
+        if (button.dataset.url) {
+            let type = button.dataset.type || 'json'
+            let url = button.dataset.url
+            button.addEventListener('click', async () => {
+                output.innerHTML = "..."
+                output.classList.remove("ok", "error")
+                await API.GET({
+                    url,
+                    method: button.dataset.method || 'GET',
+                    cancellable: true,
+                    timeout: "1s",
+                    query: {
+                        toto: [12,13,14]
+                    }
+                })
+                    .then((res) => {
+                        printData(res, type)
+                    })
+                    .catch((res) => {
+                        printData(res, type)
+                    })
+                /*.finally(async (res) => {
+                    console.info(res, type)
+                    let data = null
+
+
+                })*/
+            })
+        }
+    })
+
+    async function printData(response, type) {
+        let data
+        let res = response.response
+        try {
+            if (type === "json") {
+                data = await res.json()
+            } else if (type === "text") {
+                data = await res.text()
+            } else if (type === "blob") {
+                let img = new Image()
+                data = await res.blob()
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64data = reader.result;
+                    data = `<img src="" />`
+                }
+                reader.readAsDataURL(data);
+            } else if (type === "buffer") {
+                data = await res.arrayBuffer()
+            } else if (type === "form") {
+                data = await res.formData()
+            }
+        } catch (e) {
+            if (res instanceof Error) {
+                data = {
+                    error: res.message
+                }
+            } else {
+                data = res
+            }
+        }
+        output.innerHTML = `<h1>FetchrResponse</h1><pre>${JSON.stringify(response, null, 4)}</pre><h1>Response data</h1><pre>${JSON.stringify(data, null, 4)}</pre>`
+        if (response.error) {
+            output.classList.remove("ok")
+            output.classList.add("error")
+        } else {
+            output.classList.remove("error")
+            output.classList.add("ok")
+        }
+    }
+</script>
+</body>
+</html>
