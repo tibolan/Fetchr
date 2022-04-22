@@ -1,5 +1,5 @@
 import Fetchr from "./Fetchr.js";
-import {FetchrRequestType, FetchrOptionsType, FetchrResponseType} from "./types";
+import {FetchrRequestType, FetchrOptionsType, FetchrResponseType, FetchrMethodsType} from "./types";
 
 const ClientDefaultOptions: any = {
   method: 'GET'
@@ -12,17 +12,49 @@ class Client {
     this.setOptions(config)
   }
 
-  async fetch(method: string, config: any) {
-    let conf = Object.assign({}, this.options, config)
-    try {
-      conf.timeout && (conf.timeout = parseDuration(conf.timeout))
-      conf.cacheable && (conf.cacheable = parseDuration(conf.cacheable))
-      // all good stuff come here
-      return Fetchr(conf)
-    } catch (e) {
-      console.warn(e)
+  async fetch(method: FetchrMethodsType, request: any) {
+    let mergedConf: FetchrRequestType = null
+    if (typeof request === "string") {
+      mergedConf = Object.assign({}, this.options, {url: request})
+    } else {
+      mergedConf = Object.assign({}, this.options, request)
     }
 
+    mergedConf.method = method
+
+    mergedConf.timeout && (mergedConf.timeout = parseDuration(mergedConf.timeout))
+    mergedConf.cacheable && (mergedConf.cacheable = parseDuration(mergedConf.cacheable))
+
+    // all other good stuff come here...
+
+    return Fetchr(mergedConf)
+        .then(async (res) => {
+          let data = null
+          try {
+            if (res.request.type === "json") {
+              data = await res.response.json()
+            } else if (res.request.type === "text") {
+              data = await res.response.text()
+            } else if (res.request.type === "blob") {
+              data = await new Promise(async (resolve, reject) => {
+                data = await res.response.blob()
+                const reader = await new FileReader();
+                reader.onloadend = () => {
+                  resolve(reader.result)
+                }
+                reader.readAsDataURL(data);
+              })
+            } else if (res.request.type === "buffer") {
+              data = await res.response.arrayBuffer()
+            } else if (res.request.type === "form") {
+              data = await res.response.formData()
+            }
+          } catch (e) {
+            //
+          }
+          res.data = data
+          return res
+        })
   }
 
   setOptions(config: any) {

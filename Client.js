@@ -43,20 +43,88 @@ var Client = (function () {
         this.options = Object.assign({}, ClientDefaultOptions);
         this.setOptions(config);
     }
-    Client.prototype.fetch = function (method, config) {
+    Client.prototype.fetch = function (method, request) {
         return __awaiter(this, void 0, void 0, function () {
-            var conf;
+            var mergedConf;
+            var _this = this;
             return __generator(this, function (_a) {
-                conf = Object.assign({}, this.options, config);
-                try {
-                    conf.timeout && (conf.timeout = parseDuration(conf.timeout));
-                    conf.cacheable && (conf.cacheable = parseDuration(conf.cacheable));
-                    return [2, Fetchr(conf)];
+                mergedConf = null;
+                if (typeof request === "string") {
+                    mergedConf = Object.assign({}, this.options, { url: request });
                 }
-                catch (e) {
-                    console.warn(e);
+                else {
+                    mergedConf = Object.assign({}, this.options, request);
                 }
-                return [2];
+                mergedConf.method = method;
+                mergedConf.timeout && (mergedConf.timeout = parseDuration(mergedConf.timeout));
+                mergedConf.cacheable && (mergedConf.cacheable = parseDuration(mergedConf.cacheable));
+                return [2, Fetchr(mergedConf)
+                        .then(function (res) { return __awaiter(_this, void 0, void 0, function () {
+                        var data, e_1;
+                        var _this = this;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    data = null;
+                                    _a.label = 1;
+                                case 1:
+                                    _a.trys.push([1, 12, , 13]);
+                                    if (!(res.request.type === "json")) return [3, 3];
+                                    return [4, res.response.json()];
+                                case 2:
+                                    data = _a.sent();
+                                    return [3, 11];
+                                case 3:
+                                    if (!(res.request.type === "text")) return [3, 5];
+                                    return [4, res.response.text()];
+                                case 4:
+                                    data = _a.sent();
+                                    return [3, 11];
+                                case 5:
+                                    if (!(res.request.type === "blob")) return [3, 7];
+                                    return [4, new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
+                                            var reader;
+                                            return __generator(this, function (_a) {
+                                                switch (_a.label) {
+                                                    case 0: return [4, res.response.blob()];
+                                                    case 1:
+                                                        data = _a.sent();
+                                                        return [4, new FileReader()];
+                                                    case 2:
+                                                        reader = _a.sent();
+                                                        reader.onloadend = function () {
+                                                            resolve(reader.result);
+                                                        };
+                                                        reader.readAsDataURL(data);
+                                                        return [2];
+                                                }
+                                            });
+                                        }); })];
+                                case 6:
+                                    data = _a.sent();
+                                    return [3, 11];
+                                case 7:
+                                    if (!(res.request.type === "buffer")) return [3, 9];
+                                    return [4, res.response.arrayBuffer()];
+                                case 8:
+                                    data = _a.sent();
+                                    return [3, 11];
+                                case 9:
+                                    if (!(res.request.type === "form")) return [3, 11];
+                                    return [4, res.response.formData()];
+                                case 10:
+                                    data = _a.sent();
+                                    _a.label = 11;
+                                case 11: return [3, 13];
+                                case 12:
+                                    e_1 = _a.sent();
+                                    return [3, 13];
+                                case 13:
+                                    res.data = data;
+                                    return [2, res];
+                            }
+                        });
+                    }); })];
             });
         });
     };

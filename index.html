@@ -32,6 +32,7 @@
         output pre {
             border: 2px solid lightgrey;
             padding: 20px;
+            max-width: 100%;
         }
 
 
@@ -59,15 +60,15 @@
     <h1>Fetchr</h1>
     <button data-url="https://jsonplaceholder.typicode.com/users/7" data-type="json">JSON</button>
     <button data-url="http://localhost:1177/text" data-type="text">TEXT</button>
-    <button data-url="http://localhost:1177/test404" data-type="json">404</button>
-    <button data-url="http://localhost:1177/test301" data-type="text">301</button>
-    <button data-url="http://localhost:1177/wait/990" data-type="text">wait 500</button>
-    <button data-url="http://localhost:1177/wait/1000" data-type="text">wait 1000</button>
-    <button data-url="http://localhost:1177/images/jupiter.jpg" data-type="blob">Jupiter</button>
-    <button data-url="toto" data-type="json">error</button>
-    <button data-url="https://myedenred-fr.eu.edenred.io/v2/referentials">401</button>
-
-
+    <button data-url="http://localhost:1177/images/jupiter.jpg" data-type="blob">blob</button>
+    <button data-url="https://i.imgur.com/Rnj7kZj.jpeg" data-type="blob">blob</button>
+    <button data-url="http://localhost:1177/error/206" data-type="json">206</button>
+    <button data-url="http://localhost:1177/301" data-type="text">301</button>
+    <button data-url="http://localhost:1177/error/401" data-type="json">401</button>
+    <button data-url="http://localhost:1177/error/404" data-type="json">404</button>
+    <button data-url="http://localhost:1177/error/500" data-type="json">500</button>
+    <button data-url="http://localhost:1177/wait/5000" data-type="text">timeout</button>
+    <button data-url="toto" data-type="json">error (malformed URL)</button>
 </header>
 <main>
     <output id="console"></output>
@@ -85,7 +86,7 @@
         cacheable: "10s",
         options: {
             query: {
-                splitArray: true
+                splitArray: false
             }
         }
     })
@@ -101,11 +102,12 @@
                 output.classList.remove("ok", "error")
                 await API.GET({
                     url,
+                    type,
                     method: button.dataset.method || 'GET',
                     cancellable: true,
                     timeout: "1s",
                     query: {
-                        toto: [12,13,14]
+                        foo: ["bar", "baz"]
                     }
                 })
                     .then((res) => {
@@ -114,48 +116,18 @@
                     .catch((res) => {
                         printData(res, type)
                     })
-                /*.finally(async (res) => {
-                    console.info(res, type)
-                    let data = null
-
-
-                })*/
             })
         }
     })
 
     async function printData(response, type) {
-        let data
-        let res = response.response
-        try {
-            if (type === "json") {
-                data = await res.json()
-            } else if (type === "text") {
-                data = await res.text()
-            } else if (type === "blob") {
-                let img = new Image()
-                data = await res.blob()
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64data = reader.result;
-                    data = `<img src="" />`
-                }
-                reader.readAsDataURL(data);
-            } else if (type === "buffer") {
-                data = await res.arrayBuffer()
-            } else if (type === "form") {
-                data = await res.formData()
-            }
-        } catch (e) {
-            if (res instanceof Error) {
-                data = {
-                    error: res.message
-                }
-            } else {
-                data = res
-            }
+        console.dir(response)
+        if (type === "blob") {
+            output.innerHTML = `<h1>FetchrResponse</h1><pre>${JSON.stringify(response, null, 4)}</pre><br><img src="${response.data}" alt="" width="300"/>`
+        } else {
+            output.innerHTML = `<h1>FetchrResponse</h1><pre>${JSON.stringify(response, null, 4)}</pre>`
         }
-        output.innerHTML = `<h1>FetchrResponse</h1><pre>${JSON.stringify(response, null, 4)}</pre><h1>Response data</h1><pre>${JSON.stringify(data, null, 4)}</pre>`
+
         if (response.error) {
             output.classList.remove("ok")
             output.classList.add("error")

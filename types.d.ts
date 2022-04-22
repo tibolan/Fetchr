@@ -59,8 +59,11 @@ export interface FetchrOptionsType {
 export interface FetchrResponseType {
   request: FetchrRequestType,
   response: Response,
+  data?: any,
+  ok: boolean,
   status: number,
   statusText: string;
+  errorType?: string
   error: boolean,
   aborted: boolean,
   timeout: boolean

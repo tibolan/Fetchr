@@ -1,3 +1,18 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -37,6 +52,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var CacheStorageSupported = (caches && caches instanceof CacheStorage) || false;
 var FetchrCancelStorage = {};
 var FetchrStore = null;
+var AbortTimeoutError = (function (_super) {
+    __extends(AbortTimeoutError, _super);
+    function AbortTimeoutError(message, cause) {
+        if (message === void 0) { message = ""; }
+        var _this = _super.call(this, message, cause) || this;
+        _this.message = message;
+        _this.name = "AbortTimeout";
+        return _this;
+    }
+    return AbortTimeoutError;
+}(Error));
 var parseRequest = function (request, options) {
     var url = new URL(request.url);
     if (request.query) {
@@ -90,7 +116,7 @@ var buildResponse = function (request, response, options) {
     var isError = response instanceof Error;
     var isFail = !response.ok;
     var isAborted = isError && response.name === "AbortError";
-    var isTimeout = isError && response.message === "AbortTimeout";
+    var isTimeout = isError && response.name === "AbortTimeout";
     var resp = {
         request: request,
         response: response,
@@ -103,7 +129,8 @@ var buildResponse = function (request, response, options) {
         redirected: response.redirected || false
     };
     if (isError) {
-        resp.statusText = response.name !== Error.name ? response.name : response.message;
+        resp.statusText = response.message;
+        resp.errorType = response.name;
     }
     return resp;
 };
@@ -280,7 +307,9 @@ var Fetchr = function (request) {
                                     case 0:
                                         request.endAt = Date.now();
                                         if (!(request.cacheable && response.ok)) return [3, 2];
-                                        return [4, setCache(request, response, options)["catch"](function (e) { })];
+                                        return [4, setCache(request, response, options)["catch"](function (e) {
+                                                console.warn(e);
+                                            })];
                                     case 1:
                                         _a.sent();
                                         _a.label = 2;
@@ -297,9 +326,8 @@ var Fetchr = function (request) {
                         }); })["catch"](function (error) {
                             request.endAt = Date.now();
                             if (request.timeout && (request.startAt + request.timeout) < request.endAt) {
-                                return Promise.reject(buildResponse(request, new Error('AbortTimeout', {
-                                    cause: error,
-                                    type: "timeout"
+                                return Promise.reject(buildResponse(request, new AbortTimeoutError('request aborted because of timeout', {
+                                    cause: error
                                 }), options));
                             }
                             return Promise.reject(buildResponse(request, error, options));

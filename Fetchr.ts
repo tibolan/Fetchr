@@ -10,6 +10,15 @@ const CacheStorageSupported = (caches && caches instanceof CacheStorage) || fals
 const FetchrCancelStorage: FetchCancelStorageType = {}
 let FetchrStore: FetchStorageType = null
 
+class AbortTimeoutError extends Error {
+  constructor(message = "", cause:any) {
+    // @ts-ignore
+    super(message, cause);
+    this.message = message
+    this.name = "AbortTimeout"
+  }
+}
+
 const parseRequest = function (request: FetchrRequestType, options: FetchrOptionsType): FetchrRequestType {
   /** BUILD PROPER URL */
   const url = new URL(request.url)
@@ -73,9 +82,9 @@ const buildResponse = function (request: FetchrRequestType, response: any, optio
   const isError = response instanceof Error
   const isFail = !response.ok
   const isAborted = isError && response.name === "AbortError"
-  const isTimeout = isError && response.message === "AbortTimeout"
+  const isTimeout = isError && response.name === "AbortTimeout"
 
-  const resp = {
+  const resp:FetchrResponseType = {
     request,
     response,
     ok: !isFail,
@@ -87,8 +96,10 @@ const buildResponse = function (request: FetchrRequestType, response: any, optio
     redirected: response.redirected || false
   }
   if (isError) {
-    resp.statusText = response.name !== Error.name ? response.name : response.message
+    resp.statusText = response.message
+    resp.errorType = response.name
   }
+
   return resp
 }
 
@@ -211,7 +222,9 @@ const Fetchr = async function (request: FetchrRequestType): Promise<FetchrRespon
         request.endAt = Date.now()
 
         if (request.cacheable && response.ok) {
-          await setCache(request, response, options).catch((e) => {/* SILENT CATCH */})
+          await setCache(request, response, options).catch((e) => {
+            console.warn(e)
+          })
         }
 
         if (response.ok) {
@@ -223,10 +236,8 @@ const Fetchr = async function (request: FetchrRequestType): Promise<FetchrRespon
       .catch((error) => {
         request.endAt = Date.now()
         if (request.timeout && (request.startAt + request.timeout) < request.endAt) {
-          // @ts-ignore
-          return Promise.reject(buildResponse(request, new Error('AbortTimeout', {
-            cause: error,
-            type: "timeout"
+          return Promise.reject(buildResponse(request, new AbortTimeoutError('request aborted because of timeout', {
+            cause: error
           }), options))
         }
         return Promise.reject(buildResponse(request, error, options))
